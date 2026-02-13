@@ -894,49 +894,199 @@ app.get('/api/items', authenticateToken, async (req, res) => {
  * Create new item for authenticated user
  */
 app.post('/api/items', authenticateToken, async (req, res) => {
+  console.log('\n=== CREATE ITEM ENDPOINT HIT ===');
+  console.log('User ID:', req.user.user_id);
+  console.log('Item name:', req.body.name);
+  console.log('Item room:', req.body.room);
+  console.log('Has image:', !!req.body.image);
+  
   try {
     const { name, room, notes, image } = req.body;
 
     if (!name || !room) {
+      console.log('[API] Validation failed: Missing name or room');
       return res.status(400).json({ message: 'Name and room are required' });
     }
 
+    console.log('[API] Step 1: Finding user home...');
     // Get user's home
-    const { data: homes } = await supabase
-      .from('homes')
-      .select('id')
-      .eq('owner_id', req.user.user_id)
-      .limit(1);
+    let homes;
+    try {
+      const { data, error: homeError } = await supabase
+        .from('homes')
+        .select('id')
+        .eq('owner_id', req.user.user_id)
+        .limit(1);
+
+      if (homeError) {
+        console.error('[API] Error finding home:');
+        console.error('  Message:', homeError.message);
+        console.error('  Code:', homeError.code);
+        console.error('  Full error:', homeError);
+        
+        if (isSupabaseConnectionError(homeError)) {
+          return res.status(503).json({ 
+            message: 'Database connection failed',
+            details: 'Cannot connect to Supabase'
+          });
+        }
+        
+        return res.status(500).json({ 
+          message: 'Failed to find home',
+          details: homeError.message
+        });
+      }
+
+      homes = data;
+      console.log('[API] Homes found:', homes?.length || 0);
+    } catch (homeErr) {
+      console.error('[API] Exception finding home:', homeErr.message);
+      return res.status(500).json({ message: 'Error finding home' });
+    }
 
     if (!homes || homes.length === 0) {
-      return res.status(404).json({ message: 'Home not found' });
+      console.log('[API] No home found for user, creating default home...');
+      
+      // Create default home if none exists
+      try {
+        const { data: newHome, error: createHomeError } = await supabase
+          .from('homes')
+          .insert([{
+            owner_id: req.user.user_id,
+            name: 'My Home',
+            created_at: new Date().toISOString(),
+          }])
+          .select()
+          .single();
+
+        if (createHomeError) {
+          console.error('[API] Error creating home:', createHomeError);
+          return res.status(500).json({ message: 'Failed to create home' });
+        }
+
+        homes = [newHome];
+        console.log('[API] Default home created with ID:', newHome.id);
+      } catch (createErr) {
+        console.error('[API] Exception creating home:', createErr.message);
+        return res.status(500).json({ message: 'Error creating home' });
+      }
     }
 
     const homeId = homes[0].id;
+    console.log('[API] Using home ID:', homeId);
 
-    // Create item
-    const { data: newItem, error } = await supabase
-      .from('items')
-      .insert([{
-        home_id: homeId,
-        name,
-        room,
-        notes: notes || null,
-        image: image || null,
-        created_at: new Date().toISOString(),
-      }])
-      .select()
-      .single();
+    let imageUrl = null;
 
-    if (error) {
-      console.error('[API] Create item error:', error);
-      return res.status(500).json({ message: 'Failed to create item' });
+    // Handle image upload to Supabase Storage if image provided
+    if (image && image.startsWith('data:image/')) {
+      console.log('[API] Step 2: Uploading image to Supabase Storage...');
+      
+      try {
+        // Extract base64 data
+        const base64Data = image.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(7);
+        const fileName = `${req.user.user_id}/${timestamp}-${randomStr}.jpg`;
+        
+        console.log('[API] Uploading to bucket: photos');
+        console.log('[API] File path:', fileName);
+        console.log('[API] File size:', buffer.length, 'bytes');
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('photos')
+          .upload(fileName, buffer, {
+            contentType: 'image/jpeg',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('[API] Image upload error:');
+          console.error('  Message:', uploadError.message);
+          console.error('  StatusCode:', uploadError.statusCode);
+          console.error('  Error:', uploadError.error);
+          console.error('  Full error:', uploadError);
+          
+          // Continue without image rather than failing completely
+          console.log('[API] Continuing without image...');
+        } else {
+          console.log('[API] Image uploaded successfully:', uploadData.path);
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('photos')
+            .getPublicUrl(fileName);
+          
+          imageUrl = urlData.publicUrl;
+          console.log('[API] Public URL:', imageUrl);
+        }
+      } catch (uploadErr) {
+        console.error('[API] Exception during image upload:', uploadErr.message);
+        console.error('  Code:', uploadErr.code);
+        console.error('  Full error:', uploadErr);
+        // Continue without image
+      }
     }
 
-    res.status(201).json({ item: newItem });
+    console.log('[API] Step 3: Creating item in database...');
+    // Create item
+    try {
+      const { data: newItem, error: itemError } = await supabase
+        .from('items')
+        .insert([{
+          home_id: homeId,
+          name,
+          room,
+          notes: notes || null,
+          image_url: imageUrl,
+          created_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (itemError) {
+        console.error('[API] Create item error:');
+        console.error('  Message:', itemError.message);
+        console.error('  Code:', itemError.code);
+        console.error('  Details:', itemError.details);
+        console.error('  Hint:', itemError.hint);
+        console.error('  Full error:', itemError);
+        
+        if (isSupabaseConnectionError(itemError)) {
+          return res.status(503).json({ 
+            message: 'Database connection failed',
+            details: 'Cannot connect to Supabase'
+          });
+        }
+        
+        return res.status(500).json({ 
+          message: 'Failed to create item',
+          details: itemError.message,
+          hint: itemError.hint
+        });
+      }
+
+      console.log('[API] ✅ Item created successfully with ID:', newItem.id);
+      res.status(201).json({ item: newItem });
+    } catch (itemErr) {
+      console.error('[API] Exception creating item:', itemErr.message);
+      return res.status(500).json({ 
+        message: 'Error creating item',
+        details: itemErr.message
+      });
+    }
   } catch (error) {
-    console.error('[API] Create item error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('\n[API] ❌ UNHANDLED CREATE ITEM ERROR:');
+    console.error('  Message:', error.message);
+    console.error('  Stack:', error.stack);
+    console.error('  Full error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      details: error.message
+    });
   }
 });
 
