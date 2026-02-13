@@ -1,169 +1,90 @@
 /**
- * Auth - Frontend-only mock authentication system
- * 
- * This is a simple auth layer that stores user data in localStorage.
- * Will be replaced by real backend authentication in the future.
- * 
- * User model:
- * {
- *   id: string,
- *   email: string,
- *   createdAt: string
- * }
+ * Authentication Module
+ * Handles user authentication, token management, and session state
  */
 const Auth = (() => {
-  const STORAGE_KEY = 'myhome_user';
-  const SESSION_KEY = 'myhome_session';
-
-  // ─── Helpers ────────────────────────────────────────────
-
-  /**
-   * Generate a short unique ID
-   * @returns {string}
-   */
-  function generateId() {
-    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
-  }
-
-  /**
-   * Simple email validation
-   * @param {string} email
-   * @returns {boolean}
-   */
-  function isValidEmail(email) {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
-  }
-
-  /**
-   * Get stored users from localStorage
-   * @returns {Array}
-   */
-  function _getUsers() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      console.error('[Auth] Failed to read users:', e);
-      return [];
-    }
-  }
-
-  /**
-   * Save users to localStorage
-   * @param {Array} users
-   */
-  function _saveUsers(users) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-    } catch (e) {
-      console.error('[Auth] Failed to save users:', e);
-    }
-  }
-
-  /**
-   * Get current session
-   * @returns {Object|null}
-   */
-  function _getSession() {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      console.error('[Auth] Failed to read session:', e);
-      return null;
-    }
-  }
-
-  /**
-   * Save session
-   * @param {Object} user
-   */
-  function _saveSession(user) {
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    } catch (e) {
-      console.error('[Auth] Failed to save session:', e);
-    }
-  }
-
-  /**
-   * Clear session
-   */
-  function _clearSession() {
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch (e) {
-      console.error('[Auth] Failed to clear session:', e);
-    }
-  }
-
-  // ─── Public API ─────────────────────────────────────────
+  const TOKEN_KEY = 'auth_token';
+  const USER_KEY = 'auth_user';
 
   /**
    * Register a new user
    * @param {string} email
    * @param {string} password
-   * @param {string} [name] - Optional name (defaults to email)
-   * @returns {Promise<Object>} { success: boolean, user?: Object, error?: string }
+   * @returns {Promise<{success: boolean, user?: object, error?: string}>}
    */
-  async function register(email, password, name = null) {
+  async function register(email, password) {
+    console.log('[Auth.register] Called with:', { email, password: password ? '[PRESENT]' : '[MISSING]' });
+    
+    const payload = { email, password };
+    console.log('[Auth.register] Payload:', JSON.stringify(payload));
+    
     try {
-      const data = await API.apiFetch('/register', {
+      const response = await fetch('http://localhost:3000/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ 
-          name: name || email.split('@')[0], 
-          email, 
-          password 
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      // Save token to localStorage
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
+      console.log('[Auth.register] Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('[Auth.register] Response data:', data);
+
+      if (!response.ok) {
+        console.error('[Auth.register] Registration failed:', data);
+        return { success: false, error: data.message || 'Registration failed' };
       }
 
-      // Save user to session
-      if (data.user) {
-        _saveSession(data.user);
-      }
+      // Store token and user
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
 
-      console.log('[Auth] User registered:', email);
+      console.log('[Auth.register] Success! Token stored.');
       return { success: true, user: data.user };
     } catch (error) {
-      console.error('[Auth] Registration error:', error);
-      return { success: false, error: error.message };
+      console.error('[Auth.register] Exception:', error);
+      return { success: false, error: error.message || 'Network error' };
     }
   }
 
   /**
-   * Login with email and password
+   * Login existing user
    * @param {string} email
    * @param {string} password
-   * @returns {Promise<Object>} { success: boolean, user?: Object, error?: string }
+   * @returns {Promise<{success: boolean, user?: object, error?: string}>}
    */
   async function login(email, password) {
+    console.log('[Auth.login] Called with:', { email, password: password ? '[PRESENT]' : '[MISSING]' });
+    
+    const payload = { email, password };
+    console.log('[Auth.login] Payload:', JSON.stringify(payload));
+    
     try {
-      const data = await API.apiFetch('/login', {
+      const response = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      // Save token to localStorage
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
+      console.log('[Auth.login] Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('[Auth.login] Response data:', data);
+
+      if (!response.ok) {
+        console.error('[Auth.login] Login failed:', data);
+        return { success: false, error: data.message || 'Login failed' };
       }
 
-      // Save user to session
-      if (data.user) {
-        _saveSession(data.user);
-      }
+      // Store token and user
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
 
-      console.log('[Auth] User logged in:', email);
+      console.log('[Auth.login] Success! Token stored.');
       return { success: true, user: data.user };
     } catch (error) {
-      console.error('[Auth] Login error:', error);
-      return { success: false, error: error.message };
+      console.error('[Auth.login] Exception:', error);
+      return { success: false, error: error.message || 'Network error' };
     }
   }
 
@@ -171,61 +92,121 @@ const Auth = (() => {
    * Logout current user
    */
   function logout() {
-    const user = _getSession();
-    _clearSession();
-    console.log('[Auth] User logged out:', user?.email || 'unknown');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   }
 
   /**
-   * Get current logged-in user
-   * @returns {Object|null}
+   * Get current user from localStorage
+   * @returns {object|null}
    */
-  function getUser() {
-    return _getSession();
+  function getCurrentUser() {
+    const userStr = localStorage.getItem(USER_KEY);
+    if (!userStr) return null;
+    
+    try {
+      return JSON.parse(userStr);
+    } catch {
+      return null;
+    }
   }
 
   /**
-   * Check if user is logged in
+   * Get auth token
+   * @returns {string|null}
+   */
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  /**
+   * Check if user is authenticated
+   * @returns {boolean}
+   */
+  function isAuthenticated() {
+    return !!getToken();
+  }
+
+  /**
+   * Legacy alias for isAuthenticated
    * @returns {boolean}
    */
   function isLoggedIn() {
-    return _getSession() !== null;
+    return isAuthenticated();
   }
 
   /**
-   * Require authentication - redirect if not logged in
-   * @param {string} redirectRoute - Route to redirect to if not authenticated
-   * @returns {boolean} true if authenticated, false if redirected
+   * Get user object (legacy alias)
+   * @returns {object|null}
    */
-  function requireAuth(redirectRoute = '/login') {
-    if (!isLoggedIn()) {
-      console.log('[Auth] Authentication required, redirecting to', redirectRoute);
-      if (typeof Router !== 'undefined') {
-        Router.navigate(redirectRoute);
-      } else {
-        window.location.hash = '#' + redirectRoute;
+  function getUser() {
+    return getCurrentUser();
+  }
+
+  /**
+   * Verify authentication with backend
+   * Calls /auth/me to check if token is still valid
+   * @returns {Promise<{valid: boolean, user?: object}>}
+   */
+  async function verifyAuth() {
+    const token = getToken();
+    
+    if (!token) {
+      return { valid: false };
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        // Token is invalid, clear storage
+        logout();
+        return { valid: false };
       }
+
+      const data = await response.json();
+      
+      // Update stored user info
+      if (data.user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      }
+
+      return { valid: true, user: data.user };
+    } catch (error) {
+      console.error('[Auth] Verification failed:', error);
+      return { valid: false };
+    }
+  }
+
+  /**
+   * Require authentication - redirect to login if not authenticated
+   * @returns {Promise<boolean>} true if authenticated, false otherwise
+   */
+  async function requireAuth() {
+    const result = await verifyAuth();
+    
+    if (!result.valid) {
+      window.location.hash = '#/login';
       return false;
     }
+    
     return true;
-  }
-
-  /**
-   * Clear all auth data (dev/debug utility)
-   */
-  function clearAll() {
-    _clearSession();
-    _saveUsers([]);
-    console.log('[Auth] All auth data cleared');
   }
 
   return {
     register,
     login,
     logout,
-    getUser,
+    getCurrentUser,
+    getToken,
+    isAuthenticated,
     isLoggedIn,
+    getUser,
+    verifyAuth,
     requireAuth,
-    clearAll,
   };
 })();

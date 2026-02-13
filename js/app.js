@@ -17,13 +17,13 @@ const App = (() => {
     const appEl = document.getElementById('app');
 
     appEl.innerHTML = `
-      ${Header.render({ title: 'MyHome' })}
+      ${Header.render()}
       <main class="app-content" id="view"></main>
       ${renderBottomNav()}
     `;
 
-    // Bind logout event after header is rendered
-    Header.bindLogoutEvent();
+    // Initialize header (fetch user info and bind events)
+    Header.init();
   }
 
   /**
@@ -90,11 +90,14 @@ const App = (() => {
    * @returns {Function}
    */
   function protectedRoute(handler) {
-    return (container) => {
-      if (!Auth.isLoggedIn()) {
-        Router.navigate('/login');
-        return;
+    return async (container) => {
+      // Verify auth with backend
+      const isAuthenticated = await Auth.requireAuth();
+      
+      if (!isAuthenticated) {
+        return; // requireAuth already redirected to login
       }
+      
       return handler(container);
     };
   }
@@ -135,12 +138,18 @@ const App = (() => {
   function init() {
     // 1. Check authentication state
     const isLoggedIn = Auth.isLoggedIn();
-    const currentPath = Router.getCurrentPath();
+    let currentPath = Router.getCurrentPath();
 
     // 2. Register all routes first
     registerRoutes();
 
-    // 3. Handle initial route based on auth state
+    // 3. If no hash, set default
+    if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#/') {
+      window.location.hash = isLoggedIn ? '#/home' : '#/login';
+      currentPath = Router.getCurrentPath();
+    }
+
+    // 4. Handle initial route based on auth state
     if (!isLoggedIn && PROTECTED_ROUTES.includes(currentPath)) {
       // User trying to access protected route without login
       window.location.hash = '#/login';
@@ -154,12 +163,24 @@ const App = (() => {
       renderAppropriateShell();
     }
 
-    // 4. Listen for route changes to update shell
+    let lastShellType = PUBLIC_ROUTES.includes(currentPath) ? 'auth' : 'app';
+
+    // 5. Listen for route changes to update shell ONLY when switching between auth/app
     window.addEventListener('hashchange', () => {
-      renderAppropriateShell();
+      const newPath = Router.getCurrentPath();
+      const needsAuthShell = PUBLIC_ROUTES.includes(newPath);
+      const newShellType = needsAuthShell ? 'auth' : 'app';
+      
+      // Only re-render shell if switching between auth and app views
+      if (newShellType !== lastShellType) {
+        renderAppropriateShell();
+        lastShellType = newShellType;
+        // Re-resolve route after shell change
+        setTimeout(() => Router.resolve(), 0);
+      }
     });
 
-    // 5. Start the router
+    // 6. Start the router
     Router.start();
 
     console.log('[App] MyHome app initialized');

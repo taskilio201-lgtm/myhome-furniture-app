@@ -1,6 +1,6 @@
 /**
  * Items View
- * Browse all furniture items with filter-by-room and delete
+ * Browse all furniture items with images
  */
 const ItemsView = (() => {
 
@@ -10,8 +10,11 @@ const ItemsView = (() => {
    * Render the Items screen
    * @param {HTMLElement} container
    */
-  function render(container) {
-    const allItems = Storage.getAll();
+  async function render(container) {
+    // Show loading state
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--color-text-secondary);">Loading...</div>';
+
+    const allItems = await Storage.getAll();
     const rooms = getUniqueRooms(allItems);
     const filtered = filterByRoom(allItems, activeRoom);
 
@@ -27,8 +30,8 @@ const ItemsView = (() => {
         <span class="section-header__title">${activeRoom === 'All' ? 'All Items' : activeRoom}</span>
         <span class="section-header__count">${filtered.length}</span>
       </div>
-      <div class="items-list" id="items-list">
-        ${filtered.map(item => renderListItem(item)).join('')}
+      <div class="items-grid">
+        ${filtered.map(item => ItemCard.render(item)).join('')}
       </div>
     `;
 
@@ -36,9 +39,9 @@ const ItemsView = (() => {
   }
 
   /**
-   * Get unique room names from items
+   * Get unique room names
    * @param {Array} items
-   * @returns {Array<string>}
+   * @returns {Array}
    */
   function getUniqueRooms(items) {
     const rooms = new Set(items.map(item => item.room).filter(Boolean));
@@ -57,8 +60,8 @@ const ItemsView = (() => {
   }
 
   /**
-   * Render room filter chips
-   * @param {Array<string>} rooms
+   * Render filter chips
+   * @param {Array} rooms
    * @returns {string}
    */
   function renderFilterChips(rooms) {
@@ -75,42 +78,6 @@ const ItemsView = (() => {
   }
 
   /**
-   * Render a single list item row
-   * @param {Object} item
-   * @returns {string}
-   */
-  function renderListItem(item) {
-    const thumbContent = item.image
-      ? `<img src="${item.image}" alt="${item.name}">`
-      : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-           <rect x="2" y="7" width="20" height="14" rx="2"/>
-           <path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/>
-         </svg>`;
-
-    return `
-      <div class="items-list-item" data-id="${item.id}">
-        <div class="items-list-item__thumb">
-          ${thumbContent}
-        </div>
-        <div class="items-list-item__info">
-          <div class="items-list-item__name">${item.name}</div>
-          <div class="items-list-item__room">${item.room}</div>
-        </div>
-        <div class="items-list-item__actions">
-          <button class="items-list-item__btn items-list-item__btn--delete"
-                  data-delete-id="${item.id}"
-                  aria-label="Delete ${item.name}">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
    * Render empty state
    * @returns {string}
    */
@@ -118,16 +85,14 @@ const ItemsView = (() => {
     return `
       <div class="empty-state">
         <div class="empty-state__icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
         </div>
-        <h2 class="empty-state__title">No items yet</h2>
+        <h2 class="empty-state__title">Start building your home inventory</h2>
         <p class="empty-state__text">
-          Items you add will appear here.
+          Tap the + button to add your first furniture item with a photo.
         </p>
       </div>
     `;
@@ -146,26 +111,25 @@ const ItemsView = (() => {
       });
     });
 
-    // Delete buttons
-    container.querySelectorAll('[data-delete-id]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = btn.dataset.deleteId;
-        const item = Storage.getById(id);
+    // Card clicks for delete
+    container.querySelectorAll('.item-card').forEach(card => {
+      card.addEventListener('click', async (e) => {
+        const id = card.dataset.id;
+        const allItems = await Storage.getAll();
+        const item = allItems.find(i => i.id === id);
         if (item) {
-          showDeleteConfirm(item, container);
+          showItemActions(item, container);
         }
       });
     });
   }
 
   /**
-   * Show delete confirmation bottom sheet
+   * Show item action dialog
    * @param {Object} item
    * @param {HTMLElement} container
    */
-  function showDeleteConfirm(item, container) {
-    // Remove existing dialog if any
+  function showItemActions(item, container) {
     const existing = document.querySelector('.dialog-overlay');
     if (existing) existing.remove();
 
@@ -173,43 +137,43 @@ const ItemsView = (() => {
     overlay.className = 'dialog-overlay';
     overlay.innerHTML = `
       <div class="dialog">
-        <h3 class="dialog__title">Delete "${item.name}"?</h3>
-        <p class="dialog__text">This action cannot be undone. The item will be permanently removed.</p>
+        <h3 class="dialog__title">${item.name}</h3>
+        <p class="dialog__text">${item.room}${item.notes ? ' • ' + item.notes : ''}</p>
         <div class="dialog__actions">
           <button class="btn btn--ghost" id="dialog-cancel">Cancel</button>
-          <button class="btn btn--danger" id="dialog-confirm">Delete</button>
+          <button class="btn btn--danger" id="dialog-delete">Delete</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(overlay);
 
-    // Animate in
     requestAnimationFrame(() => {
       overlay.classList.add('dialog-overlay--visible');
     });
 
-    // Cancel
     overlay.querySelector('#dialog-cancel').addEventListener('click', () => {
       closeDialog(overlay);
     });
 
-    // Tap outside
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeDialog(overlay);
     });
 
-    // Confirm delete
-    overlay.querySelector('#dialog-confirm').addEventListener('click', () => {
-      Storage.remove(item.id);
+    overlay.querySelector('#dialog-delete').addEventListener('click', async () => {
+      const success = await Storage.deleteItem(item.id);
       closeDialog(overlay);
-      showToast(`"${item.name}" deleted`, 'success');
-      render(container);
+      if (success) {
+        showToast(`"${item.name}" deleted`, 'success');
+        render(container);
+      } else {
+        showToast('Failed to delete item', 'error');
+      }
     });
   }
 
   /**
-   * Close dialog overlay
+   * Close dialog
    * @param {HTMLElement} overlay
    */
   function closeDialog(overlay) {
@@ -218,12 +182,11 @@ const ItemsView = (() => {
   }
 
   /**
-   * Show a toast notification
+   * Show toast
    * @param {string} message
-   * @param {string} type - 'success' or 'error'
+   * @param {string} type
    */
   function showToast(message, type = 'success') {
-    // Remove existing toast
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
 

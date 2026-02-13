@@ -83,7 +83,7 @@ const LoginView = (() => {
 
     // Disable button and show loading
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Logging in...';
+    submitBtn.textContentss = 'Logging in...';
 
     try {
       // Attempt login (now async)

@@ -43,9 +43,8 @@ const Router = (() => {
     const path = getCurrentPath();
     const handler = routes[path];
 
-    if (!contentEl) {
-      contentEl = document.getElementById('view');
-    }
+    // Always re-fetch the content element (in case shell was re-rendered)
+    contentEl = document.getElementById('view');
 
     if (!contentEl) {
       console.error('[Router] #view element not found');

@@ -1,87 +1,91 @@
 /**
  * Header Component
- * Renders the mobile app header with logo and title
+ * Shows user info and logout button
  */
 const Header = (() => {
 
   /**
    * Render the header
-   * @param {Object} options
-   * @param {string} [options.title='MyHome'] - Header title
-   * @param {boolean} [options.showLogout=true] - Show logout button if logged in
-   * @returns {string} HTML string
+   * @returns {string}
    */
-  function render(options = {}) {
-    const title = options.title || 'MyHome';
-    const showLogout = options.showLogout !== false;
-    
-    // Check if user is logged in
-    const isLoggedIn = typeof Auth !== 'undefined' && Auth.isLoggedIn();
-    const showLogoutBtn = showLogout && isLoggedIn;
-
+  function render() {
     return `
       <header class="app-header">
-        <div class="app-header__logo">
-          <div class="app-header__icon">MH</div>
-          <h1 class="app-header__title">${title}</h1>
-        </div>
-        <div class="app-header__actions">
-          ${showLogoutBtn ? `
-            <button class="app-header__btn" id="header-logout-btn" aria-label="Logout" title="Logout">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </button>
-          ` : ''}
+        <h1 class="app-header__welcome">欢迎回家</h1>
+        <div class="app-header__user" id="header-user">
+          <span class="app-header__email">加载中...</span>
+          <button class="app-header__logout" id="header-logout" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
         </div>
       </header>
     `;
   }
 
   /**
-   * Bind logout event (call after rendering shell)
+   * Initialize header - fetch user info and bind events
    */
-  function bindLogoutEvent() {
-    const logoutBtn = document.getElementById('header-logout-btn');
+  async function init() {
+    const userEl = document.querySelector('#header-user .app-header__email');
+    const logoutBtn = document.getElementById('header-logout');
+
+    if (!userEl) return;
+
+    // Verify auth and get user info
+    const result = await Auth.verifyAuth();
+
+    if (result.valid && result.user) {
+      userEl.textContent = result.user.email;
+      if (logoutBtn) {
+        logoutBtn.style.display = 'flex';
+      }
+    } else {
+      userEl.textContent = '未登录';
+    }
+
+    // Bind logout event
     if (logoutBtn) {
       logoutBtn.addEventListener('click', handleLogout);
     }
   }
 
   /**
-   * Handle logout button click
+   * Handle logout
    */
   function handleLogout() {
-    if (typeof Auth !== 'undefined' && Auth.isLoggedIn()) {
-      Auth.logout();
-      
-      // Show toast
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.textContent = 'Logged out successfully';
-      document.body.appendChild(toast);
-      
-      requestAnimationFrame(() => {
-        toast.classList.add('toast--visible');
-      });
-      
-      setTimeout(() => {
-        toast.classList.remove('toast--visible');
-        setTimeout(() => toast.remove(), 400);
-      }, 1500);
+    Auth.logout();
+    
+    // Show toast
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = '已退出登录';
+    document.body.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+      toast.classList.add('toast--visible');
+    });
+    
+    setTimeout(() => {
+      toast.classList.remove('toast--visible');
+      setTimeout(() => toast.remove(), 400);
+    }, 1500);
 
-      // Redirect to login
-      setTimeout(() => {
-        if (typeof Router !== 'undefined') {
-          Router.navigate('/login');
-        } else {
-          window.location.hash = '#/login';
-        }
-      }, 800);
-    }
+    // Redirect to login
+    setTimeout(() => {
+      window.location.hash = '#/login';
+    }, 800);
   }
 
-  return { render, bindLogoutEvent };
+  /**
+   * Legacy function for compatibility
+   */
+  function bindLogoutEvent() {
+    // No-op, init() handles everything now
+  }
+
+  return { render, init, bindLogoutEvent };
 })();
