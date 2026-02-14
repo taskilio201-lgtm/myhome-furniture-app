@@ -10,8 +10,8 @@ const ItemCard = (() => {
    * @returns {string}
    */
   function render(item) {
-    const imageHTML = item.image
-      ? `<img class="item-card__image" src="${item.image}" alt="${item.name}" loading="lazy">`
+    const imageHTML = item.image_url
+      ? `<img class="item-card__image" src="${item.image_url}" alt="${item.name}" loading="lazy">`
       : `<div class="item-card__image item-card__image--placeholder">
            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -25,7 +25,7 @@ const ItemCard = (() => {
         ${imageHTML}
         <div class="item-card__body">
           <div class="item-card__name">${escapeHtml(item.name)}</div>
-          <span class="item-card__room">${escapeHtml(item.room)}</span>
+          <span class="item-card__room">${escapeHtml(item.category || 'Uncategorized')}</span>
         </div>
       </article>
     `;

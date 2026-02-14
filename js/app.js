@@ -5,7 +5,7 @@
 const App = (() => {
 
   // Protected routes that require authentication
-  const PROTECTED_ROUTES = ['/home', '/items', '/add-item', '/settings'];
+  const PROTECTED_ROUTES = ['/home', '/items', '/add-item', '/family', '/settings'];
   // Public routes that don't require authentication
   const PUBLIC_ROUTES = ['/login', '/register'];
 
@@ -39,18 +39,24 @@ const App = (() => {
    * @returns {string} HTML string
    */
   function renderBottomNav() {
+    const hash = (window.location.hash || '#/home').replace('#', '');
+
+    function active(route) {
+      return hash === route ? ' app-nav__item--active' : '';
+    }
+
     return `
       <nav class="app-nav">
-        <a href="#/home" class="app-nav__item app-nav__item--active">
+        <a href="#/home" class="app-nav__item${active('/home')}">
           <span class="app-nav__icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
           </span>
-          <span class="app-nav__label">Home</span>
+          <span class="app-nav__label">首页</span>
         </a>
-        <a href="#/items" class="app-nav__item">
+        <a href="#/items" class="app-nav__item${active('/items')}">
           <span class="app-nav__icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7"/>
@@ -59,26 +65,35 @@ const App = (() => {
               <rect x="3" y="14" width="7" height="7"/>
             </svg>
           </span>
-          <span class="app-nav__label">Items</span>
+          <span class="app-nav__label">物品</span>
         </a>
-        <a href="#/add-item" class="app-nav__item">
-          <span class="app-nav__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
+        <a href="#/add-item" class="app-nav__item app-nav__item--center">
+          <span class="app-nav__add-btn">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
           </span>
-          <span class="app-nav__label">Add</span>
         </a>
-        <a href="#/settings" class="app-nav__item">
+        <a href="#/family" class="app-nav__item${active('/family')}">
+          <span class="app-nav__icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <span class="app-nav__label">家庭</span>
+        </a>
+        <a href="#/settings" class="app-nav__item${active('/settings')}">
           <span class="app-nav__icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </span>
-          <span class="app-nav__label">Settings</span>
+          <span class="app-nav__label">设置</span>
         </a>
       </nav>
     `;
@@ -114,7 +129,22 @@ const App = (() => {
     Router.register('/home', protectedRoute(HomeView.render));
     Router.register('/items', protectedRoute(ItemsView.render));
     Router.register('/add-item', protectedRoute(AddItemView.render));
+    Router.register('/family', protectedRoute(FamilyView.render));
     Router.register('/settings', protectedRoute(SettingsView.render));
+  }
+
+  /**
+   * Update bottom nav active state without full re-render
+   * @param {string} currentPath
+   */
+  function updateNavActive(currentPath) {
+    const navItems = document.querySelectorAll('.app-nav__item');
+    navItems.forEach(item => {
+      const href = item.getAttribute('href');
+      if (!href) return;
+      const route = href.replace('#', '');
+      item.classList.toggle('app-nav__item--active', route === currentPath);
+    });
   }
 
   /**
@@ -177,6 +207,9 @@ const App = (() => {
         lastShellType = newShellType;
         // Re-resolve route after shell change
         setTimeout(() => Router.resolve(), 0);
+      } else if (newShellType === 'app') {
+        // Update active nav highlight without full re-render
+        updateNavActive(newPath);
       }
     });
 

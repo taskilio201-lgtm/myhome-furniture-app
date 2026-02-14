@@ -4,6 +4,15 @@
  */
 const AddItemView = (() => {
 
+  const CATEGORY_OPTIONS = [
+    '家具类',
+    '家电类',
+    '衣帽鞋袜类',
+    '数码电子',
+    '厨房用品',
+    '其他',
+  ];
+
   const ROOM_OPTIONS = [
     'Living Room',
     'Bedroom',
@@ -68,9 +77,17 @@ const AddItemView = (() => {
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="item-room">房间 *</label>
-          <select class="form-select" id="item-room" required>
-            <option value="" disabled selected>选择房间</option>
+          <label class="form-label" for="item-category">分类 *</label>
+          <select class="form-select" id="item-category" required>
+            <option value="" disabled selected>选择分类</option>
+            ${CATEGORY_OPTIONS.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="item-room">房间</label>
+          <select class="form-select" id="item-room">
+            <option value="" selected>选择房间（可选）</option>
             ${ROOM_OPTIONS.map(room => `<option value="${room}">${room}</option>`).join('')}
           </select>
         </div>
@@ -291,6 +308,7 @@ const AddItemView = (() => {
    */
   async function handleSubmit(container) {
     const name = container.querySelector('#item-name').value.trim();
+    const category = container.querySelector('#item-category').value;
     const room = container.querySelector('#item-room').value;
     const notes = container.querySelector('#item-notes').value.trim();
     const submitBtn = container.querySelector('#add-item-submit');
@@ -301,9 +319,9 @@ const AddItemView = (() => {
       showToast('Name is required', 'error');
       return;
     }
-    if (!room) {
-      shakeField(container.querySelector('#item-room'));
-      showToast('Room is required', 'error');
+    if (!category) {
+      shakeField(container.querySelector('#item-category'));
+      showToast('Category is required', 'error');
       return;
     }
 
@@ -315,6 +333,7 @@ const AddItemView = (() => {
       // Create item
       const newItem = await Storage.addItem({
         name,
+        category,
         room,
         notes,
         image: selectedImageBase64 || ''

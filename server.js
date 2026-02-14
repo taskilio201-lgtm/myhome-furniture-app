@@ -896,16 +896,14 @@ app.get('/api/items', authenticateToken, async (req, res) => {
 app.post('/api/items', authenticateToken, async (req, res) => {
   console.log('\n=== CREATE ITEM ENDPOINT HIT ===');
   console.log('User ID:', req.user.user_id);
-  console.log('Item name:', req.body.name);
-  console.log('Item room:', req.body.room);
-  console.log('Has image:', !!req.body.image);
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
   
   try {
-    const { name, room, notes, image } = req.body;
+    const { name, category, room, description, image } = req.body;
 
-    if (!name || !room) {
-      console.log('[API] Validation failed: Missing name or room');
-      return res.status(400).json({ message: 'Name and room are required' });
+    if (!name) {
+      console.log('[API] Validation failed: Missing name');
+      return res.status(400).json({ message: 'Name is required' });
     }
 
     console.log('[API] Step 1: Finding user home...');
@@ -1039,8 +1037,9 @@ app.post('/api/items', authenticateToken, async (req, res) => {
         .insert([{
           home_id: homeId,
           name,
-          room,
-          notes: notes || null,
+          category: category || 'Uncategorized',
+          room: room || null,
+          description: description || null,
           image_url: imageUrl,
           created_at: new Date().toISOString(),
         }])
@@ -1126,6 +1125,318 @@ app.delete('/api/items/:id', authenticateToken, async (req, res) => {
     res.json({ message: 'Item deleted successfully' });
   } catch (error) {
     console.error('[API] Delete item error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Family / Invite Code Endpoints ─────────────────────────
+
+/**
+ * Generate a random invite code: XXXX-XXXX-XXXX-XXXX
+ */
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+  const segments = [];
+  for (let s = 0; s < 4; s++) {
+    let seg = '';
+    for (let i = 0; i < 4; i++) {
+      seg += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    segments.push(seg);
+  }
+  return segments.join('-');
+}
+
+/**
+ * GET /api/family/home
+ * Get the current user's home + members, auto-create if none
+ */
+app.get('/api/family/home', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    // 1. Find home where user is owner
+    let { data: home } = await supabase
+      .from('homes')
+      .select('*')
+      .eq('owner_id', userId)
+      .limit(1)
+      .single();
+
+    // 2. If no owned home, check if user is a member of another home
+    if (!home) {
+      const { data: membership } = await supabase
+        .from('home_members')
+        .select('home_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .single();
+
+      if (membership) {
+        const { data: memberHome } = await supabase
+          .from('homes')
+          .select('*')
+          .eq('id', membership.home_id)
+          .single();
+        home = memberHome;
+      }
+    }
+
+    // 3. Still no home — create one
+    if (!home) {
+      const { data: newHome, error: createErr } = await supabase
+        .from('homes')
+        .insert([{
+          owner_id: userId,
+          name: 'My Home',
+          created_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (createErr) {
+        console.error('[Family] Error creating home:', createErr);
+        return res.status(500).json({ message: 'Failed to create home' });
+      }
+      home = newHome;
+    }
+
+    // 4. Get members
+    const { data: members, error: membersErr } = await supabase
+      .from('home_members')
+      .select('user_id, role, joined_at')
+      .eq('home_id', home.id);
+
+    if (membersErr) {
+      console.error('[Family] Error fetching members:', membersErr);
+    }
+
+    // 5. Enrich members with email from auth.users (via admin)
+    let enrichedMembers = [];
+    if (members && members.length > 0) {
+      for (const m of members) {
+        try {
+          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(m.user_id);
+          enrichedMembers.push({
+            user_id: m.user_id,
+            email: authUser?.email || 'Unknown',
+            role: m.role,
+            joined_at: m.joined_at,
+          });
+        } catch {
+          enrichedMembers.push({
+            user_id: m.user_id,
+            email: 'Unknown',
+            role: m.role,
+            joined_at: m.joined_at,
+          });
+        }
+      }
+    }
+
+    // If no members yet (trigger didn't fire), at least show owner
+    if (enrichedMembers.length === 0) {
+      try {
+        const { data: { user: ownerAuth } } = await supabase.auth.admin.getUserById(home.owner_id);
+        enrichedMembers.push({
+          user_id: home.owner_id,
+          email: ownerAuth?.email || 'Unknown',
+          role: 'owner',
+          joined_at: home.created_at,
+        });
+      } catch {
+        enrichedMembers.push({
+          user_id: home.owner_id,
+          email: 'Unknown',
+          role: 'owner',
+          joined_at: home.created_at,
+        });
+      }
+    }
+
+    res.json({
+      home: {
+        id: home.id,
+        name: home.name,
+        invite_code: home.invite_code || null,
+        owner_id: home.owner_id,
+      },
+      members: enrichedMembers,
+      isOwner: home.owner_id === userId,
+    });
+  } catch (err) {
+    console.error('[Family] Error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * GET /api/family/invite-code
+ * Generate or return existing invite code for user's home
+ */
+app.get('/api/family/invite-code', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    // Find user's home (as owner or member)
+    let homeId;
+
+    const { data: ownedHome } = await supabase
+      .from('homes')
+      .select('id, invite_code')
+      .eq('owner_id', userId)
+      .limit(1)
+      .single();
+
+    if (ownedHome) {
+      homeId = ownedHome.id;
+
+      // If code already exists, return it
+      if (ownedHome.invite_code) {
+        return res.json({ invite_code: ownedHome.invite_code });
+      }
+    } else {
+      // Check membership
+      const { data: membership } = await supabase
+        .from('home_members')
+        .select('home_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .single();
+
+      if (!membership) {
+        return res.status(404).json({ message: 'No home found' });
+      }
+      homeId = membership.home_id;
+
+      const { data: memberHome } = await supabase
+        .from('homes')
+        .select('invite_code')
+        .eq('id', homeId)
+        .single();
+
+      if (memberHome?.invite_code) {
+        return res.json({ invite_code: memberHome.invite_code });
+      }
+    }
+
+    // Generate new invite code with collision retry
+    let code;
+    let attempts = 0;
+    while (attempts < 5) {
+      code = generateInviteCode();
+      const { data: existing } = await supabase
+        .from('homes')
+        .select('id')
+        .eq('invite_code', code)
+        .limit(1);
+      if (!existing || existing.length === 0) break;
+      attempts++;
+    }
+
+    // Save it
+    const { error: updateErr } = await supabase
+      .from('homes')
+      .update({ invite_code: code })
+      .eq('id', homeId);
+
+    if (updateErr) {
+      console.error('[Family] Error saving invite code:', updateErr);
+      return res.status(500).json({ message: 'Failed to generate invite code' });
+    }
+
+    res.json({ invite_code: code });
+  } catch (err) {
+    console.error('[Family] invite-code error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * GET /api/family/verify-code/:code
+ * Check if an invite code is valid — returns home name only
+ */
+app.get('/api/family/verify-code/:code', authenticateToken, async (req, res) => {
+  try {
+    const code = req.params.code.toUpperCase().trim();
+
+    const { data: home } = await supabase
+      .from('homes')
+      .select('name')
+      .eq('invite_code', code)
+      .limit(1)
+      .single();
+
+    if (!home) {
+      return res.json({ valid: false, home_name: null });
+    }
+
+    res.json({ valid: true, home_name: home.name });
+  } catch (err) {
+    console.error('[Family] verify-code error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * POST /api/family/join
+ * Join a family using an invite code
+ */
+app.post('/api/family/join', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const code = (req.body.invite_code || '').toUpperCase().trim();
+
+    if (!code) {
+      return res.status(400).json({ message: 'Invite code is required' });
+    }
+
+    // 1. Find home by code
+    const { data: home } = await supabase
+      .from('homes')
+      .select('id, name, owner_id')
+      .eq('invite_code', code)
+      .limit(1)
+      .single();
+
+    if (!home) {
+      return res.status(404).json({ message: '邀请码无效' });
+    }
+
+    // 2. Check if user is already a member
+    const { data: existing } = await supabase
+      .from('home_members')
+      .select('id')
+      .eq('home_id', home.id)
+      .eq('user_id', userId)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return res.status(409).json({ message: '你已经是该家庭的成员' });
+    }
+
+    // 3. Add user as member
+    const { error: insertErr } = await supabase
+      .from('home_members')
+      .insert([{
+        home_id: home.id,
+        user_id: userId,
+        role: 'member',
+        invited_by: home.owner_id,
+        joined_at: new Date().toISOString(),
+      }]);
+
+    if (insertErr) {
+      console.error('[Family] Error joining home:', insertErr);
+      return res.status(500).json({ message: 'Failed to join family' });
+    }
+
+    res.json({
+      message: '成功加入家庭',
+      home_name: home.name,
+    });
+  } catch (err) {
+    console.error('[Family] join error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

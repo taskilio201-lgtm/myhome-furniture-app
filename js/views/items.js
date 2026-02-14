@@ -44,7 +44,7 @@ const ItemsView = (() => {
    * @returns {Array}
    */
   function getUniqueRooms(items) {
-    const rooms = new Set(items.map(item => item.room).filter(Boolean));
+    const rooms = new Set(items.map(item => item.category).filter(Boolean));
     return ['All', ...Array.from(rooms).sort()];
   }
 
@@ -56,7 +56,7 @@ const ItemsView = (() => {
    */
   function filterByRoom(items, room) {
     if (room === 'All') return items;
-    return items.filter(item => item.room === room);
+    return items.filter(item => item.category === room);
   }
 
   /**
@@ -138,7 +138,7 @@ const ItemsView = (() => {
     overlay.innerHTML = `
       <div class="dialog">
         <h3 class="dialog__title">${item.name}</h3>
-        <p class="dialog__text">${item.room}${item.notes ? ' • ' + item.notes : ''}</p>
+        <p class="dialog__text">${item.category || 'Uncategorized'}${item.description ? ' • ' + item.description : ''}</p>
         <div class="dialog__actions">
           <button class="btn btn--ghost" id="dialog-cancel">Cancel</button>
           <button class="btn btn--danger" id="dialog-delete">Delete</button>

@@ -382,6 +382,317 @@
       box-shadow: 0 2px 8px rgba(122, 157, 126, 0.24);
     }
 
+    /* ===== FAMILY ===== */
+    .family {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .family__header {
+      margin-bottom: 24px;
+    }
+
+    .family__title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 4px;
+    }
+
+    .family__subtitle {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+    }
+
+    .family__section {
+      background: var(--color-surface);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--color-border);
+    }
+
+    .family__section--info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+      background: var(--color-bg-secondary);
+      border: none;
+    }
+
+    .family__section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    .family__description {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .family__members {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .family__member {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+    }
+
+    .family__member-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--color-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .family__member-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .family__member-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .family__member-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 8px;
+      width: fit-content;
+    }
+
+    .family__member-badge--owner {
+      background: rgba(122, 157, 126, 0.12);
+      color: var(--color-primary-dark);
+    }
+
+    .family__invite-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(122, 157, 126, 0.25);
+      transition: all 0.2s;
+    }
+
+    .family__invite-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 2px 6px rgba(122, 157, 126, 0.2);
+    }
+
+    .family__invite-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .family__join-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--color-surface);
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .family__join-btn:active {
+      background: rgba(122, 157, 126, 0.06);
+      transform: scale(0.97);
+    }
+
+    /* Invite code display */
+    .family__code-box {
+      margin-top: 4px;
+    }
+
+    .family__code-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-bg, #F7F5F2);
+      border: 1px dashed var(--color-border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      gap: 12px;
+    }
+
+    .family__code-text {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--color-text);
+      user-select: all;
+    }
+
+    .family__code-copy {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .family__code-copy:active {
+      transform: scale(0.95);
+    }
+
+    /* Member avatar variant */
+    .family__member-avatar--member {
+      background: var(--color-text-secondary);
+    }
+
+    .family__member-badge--member {
+      background: rgba(107, 114, 128, 0.1);
+      color: var(--color-text-secondary);
+    }
+
+    /* Join modal */
+    .family-modal__overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      z-index: 999;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .family-modal {
+      background: var(--color-surface);
+      border-radius: 20px 20px 16px 16px;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px 20px 28px;
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15);
+      animation: slideUp 0.25s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0.5; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .family-modal__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .family-modal__title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .family-modal__close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--color-bg, #F7F5F2);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      font-family: inherit;
+    }
+
+    .family-modal__desc {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .family-modal__input {
+      width: 100%;
+      padding: 14px 16px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-align: center;
+      text-transform: uppercase;
+      border: 2px solid var(--color-border);
+      border-radius: 14px;
+      background: var(--color-bg, #F7F5F2);
+      color: var(--color-text);
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+
+    .family-modal__input:focus {
+      border-color: var(--color-primary);
+    }
+
+    .family-modal__verify {
+      text-align: center;
+      font-size: 14px;
+      padding: 10px 0 4px;
+    }
+
+    .family-modal .family__invite-btn {
+      margin-top: 16px;
+    }
+
     /* ===== SETTINGS ===== */
     .settings {
       max-width: 600px;
@@ -467,7 +778,7 @@
     /* ===== BOTTOM NAV ===== */
     .app-nav {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       justify-content: space-around;
       height: var(--nav-height);
       padding-bottom: var(--safe-area-bottom);
@@ -487,18 +798,46 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
-      padding: 6px 12px;
+      padding: 8px 0;
       border: none;
       background: none;
       cursor: pointer;
       color: var(--color-text-secondary);
       text-decoration: none;
       transition: color 0.2s;
-      min-width: 64px;
+      flex: 1;
     }
 
     .app-nav__item--active {
       color: var(--color-primary);
+    }
+
+    .app-nav__item--center {
+      position: relative;
+      flex: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-nav__add-btn {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: var(--color-primary);
+      color: white;
+      box-shadow: 0 4px 14px rgba(122, 157, 126, 0.35);
+      transform: translateY(-14px);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .app-nav__item--center:active .app-nav__add-btn {
+      transform: translateY(-14px) scale(0.92);
+      box-shadow: 0 2px 8px rgba(122, 157, 126, 0.3);
     }
 
     .app-nav__icon {
@@ -507,7 +846,7 @@
     }
 
     .app-nav__label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 500;
     }
 
@@ -548,32 +887,6 @@
       color: var(--color-text-secondary);
       max-width: 260px;
       line-height: 1.6;
-    }
-
-    /* ===== FAB (Floating Action Button) ===== */
-    .fab {
-      position: fixed;
-      bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
-      left: 50%;
-      transform: translateX(-50%);
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      border: none;
-      background: var(--color-primary);
-      color: white;
-      cursor: pointer;
-      box-shadow: var(--shadow-fab);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 50;
-    }
-
-    .fab:active {
-      transform: translateX(-50%) scale(0.94);
-      box-shadow: 0 2px 8px rgba(124, 152, 133, 0.3);
     }
 
     /* ===== ITEM CARD ===== */
@@ -1154,6 +1467,7 @@
   <script src="js/views/home.js"></script>
   <script src="js/views/items.js"></script>
   <script src="js/views/add-item.js"></script>
+  <script src="js/views/family.js"></script>
   <script src="js/views/settings.js"></script>
   <script src="js/router.js"></script>
   <script src="js/app.js"></script>

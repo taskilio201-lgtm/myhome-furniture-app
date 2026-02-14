@@ -53,8 +53,9 @@ const Storage = (() => {
         },
         body: JSON.stringify({
           name: item.name,
-          room: item.room,
-          notes: item.notes || '',
+          category: item.category,
+          room: item.room || null,
+          description: item.notes || '',
           image: item.image || '',
         }),
       });

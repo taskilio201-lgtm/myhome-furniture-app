@@ -10,25 +10,17 @@ const HomeView = (() => {
    * @param {HTMLElement} container
    */
   async function render(container) {
-    // Show loading state
     container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--color-text-secondary);">Loading...</div>';
 
     const items = await Storage.getAll();
     const recentItems = items.slice(0, MAX_RECENT);
     const totalCount = items.length;
 
-    let content;
-
     if (totalCount === 0) {
-      content = renderOnboarding();
+      container.innerHTML = renderOnboarding();
     } else {
-      content = renderRecentItems(recentItems, totalCount);
+      container.innerHTML = renderRecentItems(recentItems, totalCount);
     }
-
-    container.innerHTML = `
-      ${content}
-      ${renderFAB()}
-    `;
 
     bindEvents(container);
   }
@@ -42,7 +34,6 @@ const HomeView = (() => {
       <div class="onboarding">
         <div class="onboarding__illustration">
           <svg width="180" height="180" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Moon with glow -->
             <defs>
               <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" style="stop-color:#FFF4D6;stop-opacity:0.4" />
@@ -50,37 +41,25 @@ const HomeView = (() => {
                 <stop offset="100%" style="stop-color:#FFE5A8;stop-opacity:0" />
               </radialGradient>
             </defs>
-            
-            <!-- Moon glow -->
             <circle cx="140" cy="35" r="32" fill="url(#moonGlow)"/>
-            
-            <!-- Moon body -->
             <circle cx="140" cy="35" r="16" fill="#FFE5A8"/>
             <circle cx="137" cy="32" r="3" fill="#FFF8E1" opacity="0.6"/>
             <circle cx="143" cy="37" r="2" fill="#FFF8E1" opacity="0.5"/>
-            
-            <!-- House -->
             <path d="M100 60L40 100V180H80V140H120V180H160V100L100 60Z" fill="#E8DCC4" stroke="#B5A393" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            
-            <!-- Door -->
             <rect x="90" y="150" width="20" height="30" fill="#A89484" rx="2"/>
             <circle cx="95" cy="165" r="1.5" fill="#E8DCC4"/>
-            
-            <!-- Windows with warm light -->
             <rect x="55" y="115" width="20" height="20" fill="#FFE5A8" rx="2" opacity="0.6"/>
             <rect x="125" y="115" width="20" height="20" fill="#FFE5A8" rx="2" opacity="0.6"/>
             <line x1="65" y1="115" x2="65" y2="135" stroke="#B5A393" stroke-width="1.5"/>
             <line x1="55" y1="125" x2="75" y2="125" stroke="#B5A393" stroke-width="1.5"/>
             <line x1="135" y1="115" x2="135" y2="135" stroke="#B5A393" stroke-width="1.5"/>
             <line x1="125" y1="125" x2="145" y2="125" stroke="#B5A393" stroke-width="1.5"/>
-            
-            <!-- Small plants -->
             <circle cx="70" cy="180" r="4" fill="#8BA888" opacity="0.7"/>
             <circle cx="130" cy="180" r="4" fill="#8BA888" opacity="0.7"/>
           </svg>
         </div>
         <h2 class="onboarding__title">欢迎回家</h2>
-        <p class="onboarding__subtitle">开始记录你的家居物品</p>
+        <p class="onboarding__subtitle">点击下方 + 开始记录家居物品</p>
         <button class="onboarding__cta" id="onboarding-cta">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -101,11 +80,11 @@ const HomeView = (() => {
    */
   function renderRecentItems(items, total) {
     const user = Auth.getCurrentUser();
-    const username = user ? user.email.split('@')[0] : 'User';
-    
+    const username = user ? user.email.split('@')[0] : '';
+
     return `
       <div class="home-header">
-        <h2 class="home-header__title">${username}'s Home</h2>
+        <h2 class="home-header__title">${username}的家</h2>
       </div>
       <div class="section-header">
         <span class="section-header__title">最近添加</span>
@@ -123,32 +102,10 @@ const HomeView = (() => {
   }
 
   /**
-   * Render FAB
-   * @returns {string}
-   */
-  function renderFAB() {
-    return `
-      <button class="fab" id="fab-add" aria-label="Add item">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
-    `;
-  }
-
-  /**
    * Bind events
    * @param {HTMLElement} container
    */
   function bindEvents(container) {
-    const fabBtn = container.querySelector('#fab-add');
-    if (fabBtn) {
-      fabBtn.addEventListener('click', () => {
-        Router.navigate('/add-item');
-      });
-    }
-
     const ctaBtn = container.querySelector('#onboarding-cta');
     if (ctaBtn) {
       ctaBtn.addEventListener('click', () => {
